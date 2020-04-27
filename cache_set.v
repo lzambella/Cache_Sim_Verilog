@@ -32,6 +32,7 @@ module cache_set(
     input [26:0] tag,               // tag to pull data from
     input mem_write,                // push write_data flag
     input state,                    // state input for FSM
+    input enable,                   // set enable line
     output reg [63:0] read_data,    // popped data
     output reg hit                  // 1 if the data already exists
     );
@@ -60,31 +61,13 @@ module cache_set(
     // Do the same for the actual contents of memory
     reg [61:0] data_memory [15:0];
 
-    /**
-    * Asyncronous reading of cache data
-    * Should only be done for testing purposes
-    * The syncronous write handles everything (IE return a hit when trying to add a reference that is already stored)
-    */
-    always @ (*) begin
-        // Use a for loop to short hand conditionals
-        // This should work because the tags should all be unique
-        for (i = 0; i < 15; i++) begin
-            // Check if the tag is in there and that it is valid
-            if (tags[i] == tag && valid_bits[i] == 1) begin
-                read_data <= data_memory[i];
-                //$display("Cache hit! input: %h index of tag: %d", tag, i);
-            end
-        end
-
-
-    end
 
     /**
     * Syncronous FIFO operation for pushing and removing old data
     * Outputs a hit if the data already exists
     */
-    always @ (posedge clk) begin
-        case (state)
+    always @ (state) begin
+            case (state)
             // Search the cache
             'b0: begin
                 for (i = 0; i < 15; i++) begin
@@ -93,20 +76,20 @@ module cache_set(
                         // Get the data referenced by the memory
                         read_data <= data_memory[i];
                         hit <= 1;
-                        $display("Cache hit! input: %h index of tag: %d", tag, i);
+                        //$display("Cache hit! input: %h index of tag: %d", tag, i);
                     end
                 end
             end
             // Update the cache if there was no hit
             'b1: begin
                 // Only update the cache if there was no hit
-                if (hit == 0) begin
+                if (hit == 0 && enable == 1) begin
                     // Check if the cache is full first
                     if (cache_size == 16) begin
                         // replace the reference at the READ POINTER with the new reference
                         // then increment both the read pointer and write pointer
                         tags[read_ptr] <= tag;
-                        $display("Replacing data at location %d with tag: %d", read_ptr, tag);
+                        //$display("Replacing data at location %d with tag: %h", read_ptr, tag);
                         read_ptr <= read_ptr + 1;
                         write_ptr <= write_ptr + 1;
                     // Otherwise we can just add a new reference
@@ -115,16 +98,14 @@ module cache_set(
                         // Then increment the write pointer and the total size
                         tags[write_ptr] <= tag;
                         valid_bits[write_ptr] <= 1;
-                        $display("Adding reference to location %d", write_ptr);
+                        //$display("Adding reference to location %d", write_ptr);
                         write_ptr <= write_ptr + 1;
                         cache_size <= cache_size + 1;
                     end
-                end else begin
-                    hit <= 0;
-                    $display("Data hit");
                 end
-            end
-
+                //$display("Test");
+                hit <= 0;
+                end
         endcase
     end
     // Testbench code
