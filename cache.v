@@ -15,60 +15,42 @@
     
 */
 module cache(
+    input clk,
     input [31:0] addr_in,   // Memory reference input
     input state,
-    output reg hit          // output one if any set returns a hit
+    output wire hit          // output one if any set returns a hit
 );
     // Hit outputs from each cache set
     // 16 bit bus
-    wire hit_lines [15:0];
-    reg enable_lines [15:0];
+    wire [15:0] hit_lines;
+    wire [15:0] enable_lines;
     
 
     // Get components from input address
-    wire [26:0] tag;
-    wire [4:0] index;
-    wire offset;
+    wire [24:0] tag;    // 27-bits
+    wire [3:0] index;   // 4-bits
+    wire offset;        // 1 bit
 
-    assign offset = addr_in[0];
-    assign index = addr_in[4:1];
-    assign tag = addr_in[31:5];
+    assign offset = addr_in[2:0];
+    assign index = addr_in[6:3];
+    assign tag = addr_in[31:7];
+
+    assign hit = (hit_lines > 0) ? 1 : 0;   // Workaround to check if there were any hits in any of our sets
+
+    // Takes 4 bit index and outputs enable for cache sets
+    // This 'selects' the cache for read/writing
+    decoder enable_decode(.in(index),
+                          .out(enable_lines));
 
     // Generate 16 unique cache sets easily
     genvar i;
     generate
         for (i = 0; i <= 15; i = i + 1) begin
-            cache_set set(.tag(tag),                    // tag input
+            cache_set set(.clk(clk),
+                          .tag(tag),                    // tag input
                           .enable(enable_lines[i]),     // enabler for each set
                           .state(state),                // current state of the FSM
                           .hit(hit_lines[i]));          // output hit
         end
     endgenerate
-
-
-    always @ (state) begin
-        /*
-        What happens in the states is the inverse of what normally would happen because of propagation
-
-        So in the read state, reset the hit if any and enable the set at the index for writing
-        in the write state, check if there was a hit and increment the hit count
-
-        The actual set modules themselves are synced correctly to their proper sets (read to read and write to write).
-        */
-        case (state)
-            'b0: begin
-                //enable the cache at the index for writing
-                enable_lines[index] <= 1;
-                hit <= 0;
-            end
-            // Check for hits during the write stage
-            'b1: begin
-                if (hit_lines[index] == 1) begin
-                    //$display("Hit @ index %d : %d",index, hit_lines[index]);
-                    hit <= 1;
-                end
-                enable_lines[index] <= 0;
-            end
-        endcase
-    end
 endmodule
