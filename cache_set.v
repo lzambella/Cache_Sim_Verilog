@@ -34,7 +34,7 @@ module cache_set(
     input state,                    // state input for FSM
     input enable,                   // set enable line
     output reg [63:0] read_data,    // popped data
-    output reg hit                  // 1 if the data already exists
+    output wire hit_out                  // 1 if the data already exists
     );
 
     `define STATE_SEARCH 0
@@ -63,7 +63,8 @@ module cache_set(
     // Do the same for the actual contents of memory
     reg [61:0] data_memory [15:0];
 
-
+    reg hit;
+    assign hit_out = hit;
     /**
     * Syncronous FIFO operation for pushing and removing old data
     * Outputs a hit if the data already exists
@@ -72,91 +73,21 @@ module cache_set(
             case (state)
             // Search the cache
             0: begin
-            /*
-                for (i = 0; i < 16; i++) begin          // Check each cell in the tag queue for a hit
+                for (i = 0; i < 16; i = i + 1) begin          // Check each cell in the tag queue for a hit
                     //$display("Content at location %h: %h",i, tags[i]);
                     // First check if tag exists and is valid
                     if (tags[i] == tag && valid_bits[i] == 1 && enable == 1) begin
                         // Get the data referenced by the memory
                         read_data <= data_memory[i];    // Output the data
                         hit <= 1;                       // Send a hit
-                        $display("HIT tag %h found at index %d", tag, i);
-                    end
-                end
-                */
-                if (tags[0] == tag && valid_bits[0] == 1 && enable == 1) begin
-                        read_data <= data_memory[0];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[1] == tag && valid_bits[1] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit         
-                end else if (tags[2] == tag && valid_bits[2] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit   
-                end else if (tags[3] == tag && valid_bits[3] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[4] == tag && valid_bits[4] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[5] == tag && valid_bits[5] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[6] == tag && valid_bits[6] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[7] == tag && valid_bits[7] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[8] == tag && valid_bits[8] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[9] == tag && valid_bits[9] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[10] == tag && valid_bits[10] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[11] == tag && valid_bits[11] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[12] == tag && valid_bits[12] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[13] == tag && valid_bits[13] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[14] == tag && valid_bits[14] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else if (tags[15] == tag && valid_bits[15] == 1 && enable == 1) begin
-                        read_data <= data_memory[1];    // Output the data
-                        hit <= 1;                       // Send a hit
-                end else begin
-                    // Check if the cache is full first
-                    if (cache_size == 16) begin
-                        // replace the reference at the READ POINTER with the new reference
-                        // then increment both the read pointer and write pointer
-                        tags[read_ptr] <= tag;                  // Update the tag at the pointer
-                        read_ptr <= read_ptr + 1;               // Increment the read pointer
-                        write_ptr <= write_ptr + 1;             // Increment the write pointer as well
-                        data_memory[write_ptr] <= write_data;   // Update the data that the address refers to
-
-                    // Otherwise we can just add a new reference
-                    end else begin 
-                        // add the reference to the location referred to by the write pointer
-                        // Then increment the write pointer and the total size
-                        tags[write_ptr] <= tag;         // Set the set's tag cell to the tag we were looking for
-                        valid_bits[write_ptr] <= 1;     // The valid bit is now one since there is now a reference in the cell
-                        write_ptr <= write_ptr + 1;     // Increment the write pointer which tells us where to write subsequent data to
-                        cache_size <= cache_size + 1;   // Increment the cache set's queue size
+                        //$display("HIT tag %h found at index %d", tag, i);
                     end
                 end
             end
             // Update the cache
             1: begin
                 // Only update the cache if there was no hit and the set was enabled
-                if (enable == 1) begin
+                if (enable == 1 && hit == 0) begin
                     // Check if the cache is full first
                     if (cache_size == 16) begin
                         // replace the reference at the READ POINTER with the new reference
@@ -186,5 +117,6 @@ module cache_set(
         cache_size = 0;     // Initialize size
         read_ptr = 0;
         write_ptr = 0;
+        hit = 0;
     end
 endmodule
