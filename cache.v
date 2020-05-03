@@ -50,7 +50,7 @@ module cache(
                           .tag(tag),                    // tag input
                           .enable(enable_lines[i]),     // enabler for each set
                           .state(state),                // current state of the FSM
-                          .hit(hit_lines[i]));          // output hit
+                          .hit_out(hit_lines[i]));          // output hit
         end
     endgenerate
 endmodule
