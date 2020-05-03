@@ -2,3 +2,6 @@
 *.a
 *.vcd
 a.exe
+*.zip
+*.exe
+*.TXT
