@@ -5,7 +5,7 @@ module testbench();
 
     `define TRACE_SIZE 57961
     //`define TRACE_SIZE 59856
-    //`define TRACE_SIZE 35
+    //`define TRACE_SIZE 7
 
     reg [26:0] tag;
     reg state;
@@ -44,13 +44,15 @@ module testbench();
             end
             state <= 0;
             addr_in <= addr_in + 1;
-            if(addr_in == `TRACE_SIZE) begin 
-                $display("Total references: %d\nMiss Count: %d", addr_in, addr_in - hit_count);
+            // Use +1 so the simulation doesnt end exactly on the last address, so if theres a hit there it actually increments it
+            if(addr_in == `TRACE_SIZE + 1) begin 
+                $display("Total references: %d\nMiss Count: %d\nHit Count: %d\nTime taken: %d ns", addr_in, (addr_in) - hit_count, hit_count, $time);
                 $finish;
             end
         end
     end
     initial begin
+        $display("Starting cache sim.\nUsing trace file 2");
         $dumpvars(0);
         clk = 0;
         addr_in = 0;
